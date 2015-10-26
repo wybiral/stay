@@ -13,7 +13,7 @@ import requests
 update = {
     'user:1': {'likes:a': True, 'likes:b': True, 'likes:c': True},
     'user:2': {'likes:b': True, 'likes:c': True, 'likes:d': True},
-    'user:2': {'likes:c': True, 'likes:d': True, 'likes:e': True},
+    'user:3': {'likes:c': True, 'likes:d': True, 'likes:e': True},
 }
 requests.post('http://localhost:8080/update', data=json.dumps(update))
 ```
@@ -26,7 +26,7 @@ Return all keys with feature "likes:b":
 import json
 import requests
 query = 'likes:b'
-r = requests.post('http://localhost:8080/update', data=json.dumps(query))
+r = requests.post('http://localhost:8080/query', data=json.dumps(query))
 print r.json()
 ```
 
@@ -35,7 +35,7 @@ Return all keys with features 'likes:b' and 'likes:c':
 import json
 import requests
 query = ['and', 'likes:b', 'likes:c']
-r = requests.post('http://localhost:8080/update', data=json.dumps(query))
+r = requests.post('http://localhost:8080/query', data=json.dumps(query))
 print r.json()
 ```
 
