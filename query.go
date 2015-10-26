@@ -53,3 +53,15 @@ func (a Query) GetIds() chan int {
 	}()
 	return ch
 }
+
+func (a Query) Count() int {
+	count := 0
+	for x := range a {
+		for j := 0; j < 64; j++ {
+			if x&chunk(1<<uint(j)) != 0 {
+				count += 1
+			}
+		}
+	}
+	return count
+}

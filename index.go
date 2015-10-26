@@ -55,7 +55,13 @@ func (index *Index) Set(key string, column string, value bool) {
 }
 
 func (index *Index) Query(column string) Query {
-	return index.columns[column].Query()
+	col, ok := index.columns[column]
+	if !ok {
+		ch := make(Query)
+		close(ch)
+		return ch
+	}
+	return col.Query()
 }
 
 func (index *Index) GetKeys(query Query) chan string {
@@ -67,4 +73,18 @@ func (index *Index) GetKeys(query Query) chan string {
 		close(ch)
 	}()
 	return ch
+}
+
+func (index *Index) GetColumns(key string) []string {
+	id, ok := index.ids[key]
+	if !ok {
+		id = index.newRow(key)
+	}
+	out := make([]string, 0)
+	for name, column := range index.columns {
+		if column.Get(id) {
+			out = append(out, name)
+		}
+	}
+	return out
 }
