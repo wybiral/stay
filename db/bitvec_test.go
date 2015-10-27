@@ -1,4 +1,4 @@
-package stay
+package db
 
 import (
 	"testing"

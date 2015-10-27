@@ -3,7 +3,7 @@ The Index struct holds all of the column vectors by name and does the job of
 allocating new rows and returning their id.
 */
 
-package stay
+package db
 
 type Index struct {
 	ids     map[string]int
@@ -27,7 +27,7 @@ func (index *Index) newRow(key string) int {
 
 func (index *Index) newColumn(key string) *Bitvec {
 	length := len(index.keys)
-	chunks := make([]chunk, (length/64)+1)
+	chunks := make([]chunk, (length/BITS)+1)
 	bitvec := &Bitvec{length: length, chunks: chunks}
 	index.columns[key] = bitvec
 	return bitvec
@@ -85,6 +85,14 @@ func (index *Index) GetColumns(key string) []string {
 		if column.Get(id) {
 			out = append(out, name)
 		}
+	}
+	return out
+}
+
+func (index *Index) Columns() []string {
+	out := make([]string, 0)
+	for name := range index.columns {
+		out = append(out, name)
 	}
 	return out
 }

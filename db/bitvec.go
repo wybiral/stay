@@ -2,9 +2,10 @@
 Bitvec is the core bit vector implementation for columns. Currently it's naive
 and should be replaced with a compressed representation.
 */
-package stay
+package db
 
 type chunk uint64
+const BITS = 64
 
 type Bitvec struct {
 	length int
@@ -28,15 +29,15 @@ func (bv *Bitvec) Copy() *Bitvec {
 func (bv *Bitvec) Append(x bool) {
 	i := bv.length
 	bv.length += 1
-	if bv.length > len(bv.chunks)*64 {
+	if bv.length > len(bv.chunks)*BITS {
 		bv.chunks = append(bv.chunks, 0)
 	}
 	bv.Set(i, x)
 }
 
 func (bv *Bitvec) Set(i int, x bool) {
-	n := i / 64
-	mask := chunk(1 << (uint(i) % 64))
+	n := i / BITS
+	mask := chunk(1 << (uint(i) % BITS))
 	if x {
 		bv.chunks[n] |= mask
 	} else {
@@ -45,8 +46,8 @@ func (bv *Bitvec) Set(i int, x bool) {
 }
 
 func (bv *Bitvec) Get(i int) bool {
-	n := i / 64
-	mask := chunk(1 << (uint(i) % 64))
+	n := i / BITS
+	mask := chunk(1 << (uint(i) % BITS))
 	return (bv.chunks[n] & mask) > 0
 }
 
