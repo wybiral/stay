@@ -1,5 +1,5 @@
 # stay
-Golang storage and query engine implementing bitmap indexing.
+Golang storage and query engine implementing bitmap indexing. Focused on providing fast runtime queries for realtime analytics with a simple REST interface for access.
 
 Start the server using `go run server/main.go`
 
