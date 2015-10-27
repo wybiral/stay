@@ -4,7 +4,7 @@ Golang storage and query engine implementing bitmap indexing. Focused on providi
 Start the server using `go run main.go`
 
 ## Update keys with Python
-To update keys use the /update handler. Data is sent as a JSON object in the form of {key: {feature: True/False}}. Setting features to True will add them for that key and False will remove them. You can update multiple keys at once.
+You can add features to a key using the /add handler by supplying a JSON mapping of {key: [...features to add...]}
 
 Example:
 ```
