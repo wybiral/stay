@@ -1,21 +1,21 @@
 # stay
 Golang storage and query engine implementing bitmap indexing. Focused on providing fast runtime queries for realtime analytics with a simple REST interface for access.
 
-Start the server using `go run server/main.go`
+Start the server using `go run main.go`
 
 ## Update keys with Python
-To update keys use the /update handler. Data is sent as a JSON object in the form of {key: {feature: True/False}}. Setting features to True will add them for that key and False will remove them. You can update multiple keys at once.
+You can add features to a key using the /add handler by supplying a JSON mapping of {key: [...features to add...]}
 
 Example:
 ```
 import json
 import requests
 update = {
-    'user:1': {'likes:a': True, 'likes:b': True, 'likes:c': True},
-    'user:2': {'likes:b': True, 'likes:c': True, 'likes:d': True},
-    'user:3': {'likes:c': True, 'likes:d': True, 'likes:e': True},
+    'user:1': ['likes:a', 'likes:b', 'likes:c'],
+    'user:2': ['likes:b', 'likes:c', 'likes:d'],
+    'user:3': ['likes:c', 'likes:d', 'likes:e'],
 }
-requests.post('http://localhost:8080/update', data=json.dumps(update))
+requests.post('http://localhost:8080/add', data=json.dumps(update))
 ```
 
 ## Query with Python
