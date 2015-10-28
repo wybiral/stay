@@ -27,6 +27,7 @@ type stayHandler struct {
 }
 
 func (h stayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	out := make(chan string)
 	body, _ := ioutil.ReadAll(r.Body)

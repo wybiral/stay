@@ -89,10 +89,10 @@ func (index *Index) GetColumns(key string) []string {
 	return out
 }
 
-func (index *Index) Columns() []string {
-	out := make([]string, 0)
-	for name := range index.columns {
-		out = append(out, name)
+func (index *Index) Columns() map[string]int {
+	out := make(map[string]int)
+	for name, column := range index.columns {
+		out[name] = column.Query().Count()
 	}
 	return out
 }
