@@ -8,6 +8,9 @@ func NewPage() *Page {
 	return &Page{make([]chunk, PAGE_SIZE)}
 }
 
+/*
+Set ith bit in page to x.
+*/
 func (page *Page) Set(i int, x bool) bool {
 	n := i / BITS
 	mask := chunk(1 << (uint(i) % BITS))
@@ -21,6 +24,9 @@ func (page *Page) Set(i int, x bool) bool {
 	}
 }
 
+/*
+Get ith bit.
+*/
 func (page *Page) Get(i int) bool {
 	n := i / BITS
 	mask := chunk(1 << (uint(i) % BITS))
