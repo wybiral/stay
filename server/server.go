@@ -2,67 +2,92 @@ package server
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"encoding/json"
 	"github.com/wybiral/stay/db"
 )
 
-func errorMsg(msg string) string {
+func errorMsg(msg string) []byte {
 	obj := make(map[string]string)
 	obj["error"] = msg
 	bytes, _ := json.Marshal(obj)
-	return string(bytes)
+	return bytes
+}
+
+type updatable interface {
+	update(ctx *Context) 
 }
 
 type Context struct {
 	db *db.Database
+	updates chan updatable
+}
+
+func (ctx *Context) startUpdateLoop() {
+	go func() {
+		for x := range ctx.updates {
+			x.update(ctx)
+		}
+	}()
 }
 
 type stayHandler struct {
 	ctx     *Context
-	handler func(*Context, []byte, chan string)
+	handler func(*Context, []byte, chan []byte)
 }
 
 func (h stayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
-	out := make(chan string)
+	out := make(chan []byte)
 	body, _ := ioutil.ReadAll(r.Body)
 	go h.handler(h.ctx, body, out)
-	results := <-out
-	text := results
-	io.WriteString(w, text)
+	w.Write(<-out)
 }
 
-func handleAdd(ctx *Context, body []byte, out chan string) {
-	var value map[string][]string
-	err := json.Unmarshal(body, &value)
-	if err != nil {
-		out <- errorMsg("Malformed request body")
-	} else {
-		for key, columns := range value {
+type addRemoveUpdate struct {
+	action string
+	mapping map[string][]string
+	out chan []byte
+}
+
+func (u *addRemoveUpdate) update(ctx *Context) {
+	if u.action == "add" {
+		for key, columns := range u.mapping {
 			for _, column := range columns {
 				ctx.db.Add(key, column)
 			}
 		}
-		out <- "{}"
-	}
-}
-
-func handleRemove(ctx *Context, body []byte, out chan string) {
-	var value map[string][]string
-	err := json.Unmarshal(body, &value)
-	if err != nil {
-		out <- errorMsg("Malformed request body")
 	} else {
-		for key, columns := range value {
+		for key, columns := range u.mapping {
 			for _, column := range columns {
 				ctx.db.Remove(key, column)
 			}
 		}
-		out <- "{}"
+	}
+	u.out <- []byte("{}")
+}
+
+func handleAdd(ctx *Context, body []byte, out chan []byte) {
+	var mapping map[string][]string
+	err := json.Unmarshal(body, &mapping)
+	if err != nil {
+		out <- errorMsg("Malformed request body")
+	} else {
+		u := &addRemoveUpdate{action: "add", mapping: mapping, out: out}
+		ctx.updates <- u
+	}
+}
+
+func handleRemove(ctx *Context, body []byte, out chan []byte) {
+	var mapping map[string][]string
+	err := json.Unmarshal(body, &mapping)
+	if err != nil {
+		out <- errorMsg("Malformed request body")
+	} else {
+		u := &addRemoveUpdate{action: "remove", mapping: mapping, out: out}
+		ctx.updates <- u
 	}
 }
 func buildQuery(ctx *Context, x interface{}) db.Query {
@@ -94,7 +119,7 @@ func buildQuery(ctx *Context, x interface{}) db.Query {
 	return query
 }
 
-func handleQuery(ctx *Context, body []byte, out chan string) {
+func handleQuery(ctx *Context, body []byte, out chan []byte) {
 	var value interface{}
 	err := json.Unmarshal(body, &value)
 	if err != nil {
@@ -107,30 +132,31 @@ func handleQuery(ctx *Context, body []byte, out chan string) {
 			obj = append(obj, key)
 		}
 		bytes, _ := json.Marshal(obj)
-		out <- string(bytes)
+		out <- bytes
 	}
 }
 
-func handleCount(ctx *Context, body []byte, out chan string) {
+func handleCount(ctx *Context, body []byte, out chan []byte) {
 	var value interface{}
 	err := json.Unmarshal(body, &value)
 	if err != nil {
 		out <- errorMsg("Malformed request body")
 	} else {
 		query := buildQuery(ctx, value)
-		out <- fmt.Sprintf(`{"count":%d}`, query.Count())
+		out <- []byte(fmt.Sprintf(`{"count":%d}`, query.Count()))
 	}
 }
 
-func handleColumns(ctx *Context, body []byte, out chan string) {
+func handleColumns(ctx *Context, body []byte, out chan []byte) {
 	columns := ctx.db.AllColumns()
 	bytes, _ := json.Marshal(columns)
-	out <- string(bytes)
+	out <- bytes
 }
 
 func Start(addr string) {
 	fmt.Printf("Starting server at %s...\n", addr)
-	ctx := &Context{db.NewDatabase()}
+	ctx := &Context{db.NewDatabase(), make(chan updatable)}
+	ctx.startUpdateLoop()
 	http.Handle("/add", stayHandler{ctx, handleAdd})
 	http.Handle("/remove", stayHandler{ctx, handleRemove})
 	http.Handle("/query", stayHandler{ctx, handleQuery})
