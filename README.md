@@ -1,5 +1,5 @@
 # StayDB
-StayDB is an in-memory storage engine written in [Go](https://golang.org/) implementing [bitmap indexing](https://en.wikipedia.org/wiki/Bitmap_index) and querying over a RESTful API. Focused on having a fast runtime to support real time analytics of large sets of data.
+StayDB is an in-memory storage engine written in [Go](https://golang.org/) implementing [bitmap indexing](https://en.wikipedia.org/wiki/Bitmap_index) and querying over a RESTful API. Focused on supporting fast real time analytics of large sets of data.
 
 Start the server using `go run main.go`
 
