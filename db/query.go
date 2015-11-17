@@ -1,74 +1,67 @@
 package db
 
-type Query chan chunk
-
-func (a Query) Not() Query {
-	ch := make(Query)
-	go func() {
-		for x := range a {
-			ch <- ^x
-		}
-		close(ch)
-	}()
-	return ch
+type Scan interface {
+	Next() (val word, ok bool)
 }
 
-func (a Query) And(b Query) Query {
-	ch := make(Query)
-	go func() {
-		for x := range a {
-			y := <-b
-			ch <- x & y
-		}
-		close(ch)
-	}()
-	return ch
+type notScan struct {
+	x Scan
 }
 
-func (a Query) Or(b Query) Query {
-	ch := make(Query)
-	go func() {
-		for x := range a {
-			y := <-b
-			ch <- x | y
-		}
-		close(ch)
-	}()
-	return ch
+func (s *notScan) Next() (word, bool) {
+	val, ok := s.x.Next()
+	return ^(val | FILL_BIT), ok
 }
 
-func (a Query) Xor(b Query) Query {
-	ch := make(Query)
-	go func() {
-		for x := range a {
-			y := <-b
-			ch <- x ^ y
-		}
-		close(ch)
-	}()
-	return ch
+func Not(x Scan) Scan {
+	return &notScan{x}
 }
 
-func (a Query) GetIds() chan int {
-	ch := make(chan int)
-	go func() {
-		index := 0
-		for x := range a {
-			for j := 0; j < BITS; j++ {
-				if x&chunk(1<<uint(j)) != 0 {
-					ch <- index
-				}
-				index += 1
-			}
-		}
-		close(ch)
-	}()
-	return ch
+type binaryScan struct {
+	x, y Scan
 }
 
-func (a Query) Count() int {
+type andScan binaryScan
+type orScan binaryScan
+type xorScan binaryScan
+
+func (s *andScan) Next() (word, bool) {
+	x, xok := s.x.Next()
+	y, yok := s.y.Next()
+	return x & y, xok && yok
+}
+
+func And(x, y Scan) Scan {
+	return &andScan{x, y}
+}
+
+func (s *orScan) Next() (word, bool) {
+	x, xok := s.x.Next()
+	y, yok := s.y.Next()
+	return x | y, xok && yok
+}
+
+func Or(x, y Scan) Scan {
+	return &orScan{x, y}
+}
+
+func (s *xorScan) Next() (word, bool) {
+	x, xok := s.x.Next()
+	y, yok := s.y.Next()
+	return x ^ y, xok && yok
+}
+
+func Xor(x, y Scan) Scan {
+	return &xorScan{x, y}
+}
+
+func Count(s Scan) int {
 	count := 0
-	for x := range a {
+	for {
+		x, ok := s.Next()
+		if !ok {
+			break
+		}
 		for x > 0 {
 			count++
 			x &= (x - 1)

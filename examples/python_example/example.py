@@ -16,8 +16,9 @@ stay('add', {
     'percy':  ['species:cat',   'sex:male'],
 })
 
-print stay('query', [
-    'or',
+print stay('query',
+    ['or',
         ['and', 'sex:male',   'species:human'],
         ['and', 'sex:female', 'species:cat'],
-])
+    ]
+)

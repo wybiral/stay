@@ -6,31 +6,31 @@ import (
 )
 
 func main() {
-	db := db.NewDatabase()
+	d := db.NewDatabase()
 
-	db.Add("user:0", "likes:a")
-	db.Add("user:0", "likes:b")
-	db.Add("user:0", "likes:c")
+	d.Add("user:0", "likes:a")
+	d.Add("user:0", "likes:b")
+	d.Add("user:0", "likes:c")
 
-	db.Add("user:1", "likes:a")
-	db.Add("user:1", "likes:b")
-	db.Add("user:1", "likes:d")
+	d.Add("user:1", "likes:a")
+	d.Add("user:1", "likes:b")
+	d.Add("user:1", "likes:d")
 
-	db.Add("user:2", "likes:a")
-	db.Add("user:2", "likes:d")
+	d.Add("user:2", "likes:a")
+	d.Add("user:2", "likes:d")
 
-	db.Add("user:3", "likes:d")
+	d.Add("user:3", "likes:d")
 
 	// q1 = a & b
-	q1 := db.Query("likes:a").And(db.Query("likes:b"))
+	q1 := db.And(d.Query("likes:a"), d.Query("likes:b"))
 
 	// q2 = not(a) & d
-	q2 := db.Query("likes:a").Not().And(db.Query("likes:d"))
+	q2 := db.And(db.Not(d.Query("likes:a")), d.Query("likes:d"))
 
 	// query = q1 | q2
-	query := q1.Or(q2)
+	query := db.Or(q1, q2)
 
-	for key := range db.Keys(query) {
+	for key := range d.Keys(query) {
 		fmt.Println(key)
 	}
 }

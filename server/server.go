@@ -90,8 +90,8 @@ func handleRemove(ctx *Context, body []byte, out chan []byte) {
 		ctx.updates <- u
 	}
 }
-func buildQuery(ctx *Context, x interface{}) db.Query {
-	var query db.Query
+func buildQuery(ctx *Context, x interface{}) db.Scan {
+	var query db.Scan
 	switch v := x.(type) {
 	case string:
 		query = ctx.db.Query(v)
@@ -99,19 +99,19 @@ func buildQuery(ctx *Context, x interface{}) db.Query {
 		op := v[0].(string)
 		query = buildQuery(ctx, v[1])
 		if op == "not" {
-			query = query.Not()
+			query = db.Not(query)
 		} else {
 			if op == "and" {
 				for _, q := range v[2:] {
-					query = query.And(buildQuery(ctx, q))
+					query = db.And(query, buildQuery(ctx, q))
 				}
 			} else if op == "or" {
 				for _, q := range v[2:] {
-					query = query.Or(buildQuery(ctx, q))
+					query = db.Or(query, buildQuery(ctx, q))
 				}
 			} else if op == "xor" {
 				for _, q := range v[2:] {
-					query = query.Xor(buildQuery(ctx, q))
+					query = db.Xor(query, buildQuery(ctx, q))
 				}
 			}
 		}
@@ -143,14 +143,26 @@ func handleCount(ctx *Context, body []byte, out chan []byte) {
 		out <- errorMsg("Malformed request body")
 	} else {
 		query := buildQuery(ctx, value)
-		out <- []byte(fmt.Sprintf(`{"count":%d}`, query.Count()))
+		out <- []byte(fmt.Sprintf(`{"count":%d}`, db.Count(query)))
 	}
 }
 
-func handleColumns(ctx *Context, body []byte, out chan []byte) {
-	columns := ctx.db.AllColumns()
-	bytes, _ := json.Marshal(columns)
+func handleStats(ctx *Context, body []byte, out chan []byte) {
+	results := make(map[string]interface{})
+	results["rows"] = ctx.db.Len()
+	results["columns"] = ctx.db.AllColumns()
+	bytes, _ := json.Marshal(results)
 	out <- bytes
+}
+
+func handleSave(ctx *Context, body []byte, out chan []byte) {
+	ctx.db.Save("backup.txt")
+	out <- []byte("{}")
+}
+
+func handleLoad(ctx *Context, body []byte, out chan []byte) {
+	ctx.db.Load("backup.txt")
+	out <- []byte("{}")
 }
 
 func Start(addr string) {
@@ -161,6 +173,8 @@ func Start(addr string) {
 	http.Handle("/remove", stayHandler{ctx, handleRemove})
 	http.Handle("/query", stayHandler{ctx, handleQuery})
 	http.Handle("/count", stayHandler{ctx, handleCount})
-	http.Handle("/columns", stayHandler{ctx, handleColumns})
+	http.Handle("/stats", stayHandler{ctx, handleStats})
+	http.Handle("/save", stayHandler{ctx, handleSave})
+	http.Handle("/load", stayHandler{ctx, handleLoad})
 	http.ListenAndServe(addr, nil)
 }

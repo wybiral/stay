@@ -1,17 +1,77 @@
 package db
 
-type chunk uint64
-
-const (
-	BITS      = 64               // Bits in a chunk
-	PAGE_SIZE = 64               // Chunks in a page
-	PAGE_BITS = BITS * PAGE_SIZE // Bits in a page
+import (
+	"bufio"
+	"compress/flate"
+	"encoding/binary"
+	"os"
 )
+
+type word uint32
+
+const wordbits = 32
 
 type Database struct {
 	ids     map[string]int
 	keys    []string
 	columns map[string]*Column
+}
+
+func (db *Database) Save(filename string) {
+	rows := len(db.keys)
+	columns := len(db.columns)
+	f, _ := os.Create(filename)
+	c, _ := flate.NewWriter(f, 1)
+	w := bufio.NewWriter(c)
+	binary.Write(w, binary.LittleEndian, uint32(rows))
+	binary.Write(w, binary.LittleEndian, uint32(columns))
+	for _, key := range db.keys {
+		w.WriteString(key)
+		w.WriteString("\x00")
+	}
+	for name, column := range db.columns {
+		w.WriteString(name)
+		w.WriteString("\x00")
+		binary.Write(w, binary.LittleEndian, uint32(column.count))
+		for id := range db.Ids(column.Scan()) {
+			binary.Write(w, binary.LittleEndian, uint32(id))
+		}
+	}
+	w.Flush()
+	c.Close()
+	f.Close()
+}
+
+func (db *Database) Load(filename string) {
+	var rows, columns uint32
+	f, _ := os.Open(filename)
+	c := flate.NewReader(f)
+	r := bufio.NewReader(c)
+	binary.Read(r, binary.LittleEndian, &rows)
+	binary.Read(r, binary.LittleEndian, &columns)
+	ids := make(map[string]int)
+	db.ids = ids
+	keys := make([]string, rows)
+	db.keys = keys
+	for i := 0; i < int(rows); i++ {
+		b, _ := r.ReadBytes('\x00')
+		key := string(b[:len(b)-1])
+		keys[i] = key
+		ids[key] = i
+	}
+	db.columns = make(map[string]*Column)
+	for i := 0; i < int(columns); i++ {
+		var id, count uint32
+		name, _ := r.ReadBytes('\x00')
+		binary.Read(r, binary.LittleEndian, &count)
+		column := db.getColumn(string(name[:len(name)-1]))
+		for j := 0; j < int(count); j++ {
+			binary.Read(r, binary.LittleEndian, &id)
+			column.Set(int(id), true)
+		}
+	}
+	c.Close()
+	f.Close()
 }
 
 /*
@@ -24,6 +84,10 @@ func NewDatabase() *Database {
 	db := &Database{ids: ids,
 		keys: keys, columns: columns}
 	return db
+}
+
+func (db *Database) Len() int {
+	return len(db.keys)
 }
 
 /*
@@ -69,60 +133,55 @@ func (db *Database) Remove(key string, column string) {
 	col.Set(id, false)
 }
 
-/*
-Check if "key" contains "column"
-*/
-func (db *Database) Get(key string, column string) bool {
-	id, ok := db.ids[key]
-	if !ok {
-		return false
-	}
-	col, ok := db.columns[column]
-	if !ok {
-		return false
-	}
-	return col.Get(id)
+type emptyScan struct{}
+
+func (s *emptyScan) Next() (word, bool) {
+	return 0, false
 }
 
 /*
 Return a Query over an entire column.
 */
-func (db *Database) Query(column string) Query {
-	length := (len(db.keys) / BITS) + 1
+func (db *Database) Query(column string) Scan {
 	col, ok := db.columns[column]
 	if ok {
-		return col.Query(length)
+		return col.Scan()
 	}
-	return emptyQuery(length)
+	return &emptyScan{}
 }
 
 /*
-Return resulting keys from a query.
+Return resulting ids from scan.
 */
-func (db *Database) Keys(query Query) chan string {
-	ch := make(chan string)
+func (db *Database) Ids(s Scan) chan int {
+	ch := make(chan int)
 	go func() {
 		id := 0
-		for x := range query {
-			mask := chunk(1)
-			for i := 0; i < BITS; i++ {
-				if x&mask != 0 {
-					ch <- db.keys[id]
-				}
-				mask <<= 1
-				id += 1
+		for {
+			w, ok := s.Next()
+			if !ok {
+				break
 			}
+			for i := word(0); i < wordbits-1; i++ {
+				if w&(1<<i) != 0 {
+					ch <- id + int(i)
+				}
+			}
+			id += wordbits - 1
 		}
 		close(ch)
 	}()
 	return ch
 }
 
-func emptyQuery(length int) Query {
-	ch := make(chan chunk)
+/*
+Return resulting keys from a scan.
+*/
+func (db *Database) Keys(s Scan) chan string {
+	ch := make(chan string)
 	go func() {
-		for i := 0; i < length; i++ {
-			ch <- chunk(0)
+		for id := range db.Ids(s) {
+			ch <- db.keys[id]
 		}
 		close(ch)
 	}()
