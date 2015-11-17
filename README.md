@@ -1,7 +1,17 @@
 # StayDB
 StayDB is an in-memory storage engine written in [Go](https://golang.org/) implementing [bitmap indexing](https://en.wikipedia.org/wiki/Bitmap_index) and querying over a RESTful API. Focused on supporting fast real time analytics of large sets of data.
 
-Start the server using `go run main.go`
+## Installing StayDB
+
+StayDB is written in Go, so make sure you have that installed first [(see here)](https://golang.org/doc/install). Once Go is installed use Go's package manager to install StayDB by typing the following in your command line:
+
+`go get github.com/wybiral/stay`
+
+Then you can build StayDB by typing:
+
+`go build github.com/wybiral/stay`
+
+This should produce an executable in your current directory. You can run this executable to start StayDB (running it with the `-help` flag will explain the command line options).
 
 ## Update keys with Python
 You can add features to a key using the /add handler by supplying a JSON mapping of {key: [...features to add...]}
