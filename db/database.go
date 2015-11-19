@@ -33,7 +33,7 @@ func (db *Database) Save(filename string) {
 		w.WriteString(name)
 		w.WriteString("\x00")
 		binary.Write(w, binary.LittleEndian, uint32(column.count))
-		for id := range db.Ids(column.Scan()) {
+		for id := range Ids(column.Scan()) {
 			binary.Write(w, binary.LittleEndian, uint32(id))
 		}
 	}
@@ -151,36 +151,12 @@ func (db *Database) Query(column string) Scan {
 }
 
 /*
-Return resulting ids from scan.
-*/
-func (db *Database) Ids(s Scan) chan int {
-	ch := make(chan int)
-	go func() {
-		id := 0
-		for {
-			w, ok := s.Next()
-			if !ok {
-				break
-			}
-			for i := word(0); i < wordbits-1; i++ {
-				if w&(1<<i) != 0 {
-					ch <- id + int(i)
-				}
-			}
-			id += wordbits - 1
-		}
-		close(ch)
-	}()
-	return ch
-}
-
-/*
 Return resulting keys from a scan.
 */
 func (db *Database) Keys(s Scan) chan string {
 	ch := make(chan string)
 	go func() {
-		for id := range db.Ids(s) {
+		for id := range Ids(s) {
 			ch <- db.keys[id]
 		}
 		close(ch)

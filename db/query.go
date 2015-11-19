@@ -69,3 +69,24 @@ func Count(s Scan) int {
 	}
 	return count
 }
+
+func Ids(s Scan) chan int {
+	ch := make(chan int)
+	go func() {
+		id := 0
+		for {
+			w, ok := s.Next()
+			if !ok {
+				break
+			}
+			for i := word(0); i < wordbits-1; i++ {
+				if w&(1<<i) != 0 {
+					ch <- id + int(i)
+				}
+			}
+			id += wordbits - 1
+		}
+		close(ch)
+	}()
+	return ch
+}

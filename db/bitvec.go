@@ -224,7 +224,7 @@ func (s *bScan) Next() (word, bool) {
 		return w, true
 	} else {
 		s.i++
-		s.n = (w & COUNT_BITS) + 1
+		s.n = (w & COUNT_BITS)
 		if w&ONES_BIT == 0 {
 			s.fill = word(0)
 		} else {
