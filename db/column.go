@@ -16,13 +16,17 @@ limitations under the License.
 
 package db
 
+import (
+	"github.com/wybiral/bitvec"
+)
+
 type Column struct {
 	count  int
-	vector *Bitvec
+	vector *bitvec.Bitvec
 }
 
 func NewColumn() *Column {
-	return &Column{count: 0, vector: NewBitvec()}
+	return &Column{count: 0, vector: bitvec.NewBitvec()}
 }
 
 func (col *Column) Set(id int, value bool) {
@@ -39,6 +43,6 @@ func (col *Column) Get(id int) bool {
 	return col.vector.Get(id)
 }
 
-func (col *Column) Scan() Scan {
-	return col.vector.Scan()
+func (col *Column) Iterate() bitvec.Iterator {
+	return col.vector.Iterate()
 }

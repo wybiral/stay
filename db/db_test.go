@@ -18,7 +18,7 @@ package db
 
 import (
 	"testing"
-	"math/rand"
+	"github.com/wybiral/bitvec"
 )
 
 func TestColumn(t *testing.T) {
@@ -33,48 +33,27 @@ func TestColumn(t *testing.T) {
 	}
 }
 
-func TestBitvecP01(t *testing.T) {
-	b := NewBitvec()
-	n := 1000000
-	p := 0.01
-	data := make([]int, 0)
-	for i := 0; i < n; i++ {
-		if rand.Float64() < p {
-			data = append(data, i)
-			b.Set(i, true)
-		}
-	}
-	ids := Ids(b.Scan())
-	for i, x := range data {
-		y := <- ids
-		if x != y {
-			t.Errorf("Failed on the %dth value", i)
-			return
-		}
-	}
-}
-
-func TestBitvecP50(t *testing.T) {
-	b := NewBitvec()
-	n := 1000000
-	p := 0.50
-	data := make([]int, 0)
-	for i := 0; i < n; i++ {
-		if rand.Float64() < p {
-			data = append(data, i)
-			b.Set(i, true)
-		}
-	}
-	ids := Ids(b.Scan())
-	for i, x := range data {
-		y := <- ids
-		if x != y {
-			t.Errorf("Failed on the %dth value", i)
-			return
-		}
-	}
-}
-
 func TestDatabase(t *testing.T) {
-
+	db := NewDatabase()
+	db.Add("nina", "species:human")
+	db.Add("nina", "sex:female")
+	db.Add("elaine", "species:cat")
+	db.Add("elaine", "sex:female")
+	db.Add("davy", "species:human")
+	db.Add("davy", "sex:male")
+	db.Add("percy", "species:cat")
+	db.Add("percy", "sex:male")
+	human := db.Query("species:human")
+	cat := db.Query("species:cat")
+	female := db.Query("sex:female")
+	male := db.Query("sex:male")
+	ch := db.Keys(bitvec.Or(bitvec.And(human, male), bitvec.And(cat, female)))
+	x := <-ch
+	if x != "elaine" {
+		t.Errorf("First result should be \"elaine\", got %s", x)
+	}
+	x = <-ch
+	if x != "davy" {
+		t.Errorf("Second result should be \"davy\", got %s", x)
+	}	
 }

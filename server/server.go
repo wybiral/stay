@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"encoding/json"
+	"github.com/wybiral/bitvec"
 	"github.com/wybiral/stay/db"
 )
 
@@ -106,8 +107,8 @@ func handleRemove(ctx *Context, body []byte, out chan []byte) {
 		ctx.updates <- u
 	}
 }
-func buildQuery(ctx *Context, x interface{}) db.Scan {
-	var query db.Scan
+func buildQuery(ctx *Context, x interface{}) bitvec.Iterator {
+	var query bitvec.Iterator
 	switch v := x.(type) {
 	case string:
 		query = ctx.db.Query(v)
@@ -115,19 +116,19 @@ func buildQuery(ctx *Context, x interface{}) db.Scan {
 		op := v[0].(string)
 		query = buildQuery(ctx, v[1])
 		if op == "not" {
-			query = db.Not(query)
+			query = bitvec.Not(query)
 		} else {
 			if op == "and" {
 				for _, q := range v[2:] {
-					query = db.And(query, buildQuery(ctx, q))
+					query = bitvec.And(query, buildQuery(ctx, q))
 				}
 			} else if op == "or" {
 				for _, q := range v[2:] {
-					query = db.Or(query, buildQuery(ctx, q))
+					query = bitvec.Or(query, buildQuery(ctx, q))
 				}
 			} else if op == "xor" {
 				for _, q := range v[2:] {
-					query = db.Xor(query, buildQuery(ctx, q))
+					query = bitvec.Xor(query, buildQuery(ctx, q))
 				}
 			}
 		}
@@ -159,7 +160,7 @@ func handleCount(ctx *Context, body []byte, out chan []byte) {
 		out <- errorMsg("Malformed request body")
 	} else {
 		query := buildQuery(ctx, value)
-		out <- []byte(fmt.Sprintf(`{"count":%d}`, db.Count(query)))
+		out <- []byte(fmt.Sprintf(`{"count":%d}`, bitvec.Count(query)))
 	}
 }
 

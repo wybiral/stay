@@ -21,11 +21,8 @@ import (
 	"compress/flate"
 	"encoding/binary"
 	"os"
+	"github.com/wybiral/bitvec"
 )
-
-type word uint32
-
-const wordbits = 32
 
 type Database struct {
 	ids     map[string]int
@@ -49,7 +46,7 @@ func (db *Database) Save(filename string) {
 		w.WriteString(name)
 		w.WriteString("\x00")
 		binary.Write(w, binary.LittleEndian, uint32(column.count))
-		for id := range Ids(column.Scan()) {
+		for id := range bitvec.Ids(column.Iterate()) {
 			binary.Write(w, binary.LittleEndian, uint32(id))
 		}
 	}
@@ -151,17 +148,17 @@ func (db *Database) Remove(key string, column string) {
 
 type emptyScan struct{}
 
-func (s *emptyScan) Next() (word, bool) {
+func (s *emptyScan) Next() (bitvec.Word, bool) {
 	return 0, false
 }
 
 /*
 Return a Query over an entire column.
 */
-func (db *Database) Query(column string) Scan {
+func (db *Database) Query(column string) bitvec.Iterator {
 	col, ok := db.columns[column]
 	if ok {
-		return col.Scan()
+		return col.Iterate()
 	}
 	return &emptyScan{}
 }
@@ -169,10 +166,10 @@ func (db *Database) Query(column string) Scan {
 /*
 Return resulting keys from a scan.
 */
-func (db *Database) Keys(s Scan) chan string {
+func (db *Database) Keys(s bitvec.Iterator) chan string {
 	ch := make(chan string)
 	go func() {
-		for id := range Ids(s) {
+		for id := range bitvec.Ids(s) {
 			ch <- db.keys[id]
 		}
 		close(ch)
@@ -190,3 +187,4 @@ func (db *Database) AllColumns() map[string]int {
 	}
 	return out
 }
+
