@@ -18,7 +18,6 @@ package db
 
 import (
 	"testing"
-	"github.com/wybiral/bitvec"
 )
 
 func TestColumn(t *testing.T) {
@@ -47,7 +46,7 @@ func TestDatabase(t *testing.T) {
 	cat := db.Query("species:cat")
 	female := db.Query("sex:female")
 	male := db.Query("sex:male")
-	ch := db.Keys(bitvec.Or(bitvec.And(human, male), bitvec.And(cat, female)))
+	ch := db.Keys(human.And(male).Or(cat.And(female)))
 	x := <-ch
 	if x != "elaine" {
 		t.Errorf("First result should be \"elaine\", got %s", x)
@@ -55,5 +54,5 @@ func TestDatabase(t *testing.T) {
 	x = <-ch
 	if x != "davy" {
 		t.Errorf("Second result should be \"davy\", got %s", x)
-	}	
+	}
 }

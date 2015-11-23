@@ -20,8 +20,8 @@ import (
 	"bufio"
 	"compress/flate"
 	"encoding/binary"
-	"os"
 	"github.com/wybiral/bitvec"
+	"os"
 )
 
 type Database struct {
@@ -46,7 +46,7 @@ func (db *Database) Save(filename string) {
 		w.WriteString(name)
 		w.WriteString("\x00")
 		binary.Write(w, binary.LittleEndian, uint32(column.count))
-		for id := range bitvec.Ids(column.Iterate()) {
+		for id := range column.Iterate().Ids() {
 			binary.Write(w, binary.LittleEndian, uint32(id))
 		}
 	}
@@ -146,30 +146,24 @@ func (db *Database) Remove(key string, column string) {
 	col.Set(id, false)
 }
 
-type emptyScan struct{}
-
-func (s *emptyScan) Next() (bitvec.Word, bool) {
-	return 0, false
-}
-
 /*
 Return a Query over an entire column.
 */
-func (db *Database) Query(column string) bitvec.Iterator {
+func (db *Database) Query(column string) *bitvec.Iterator {
 	col, ok := db.columns[column]
 	if ok {
 		return col.Iterate()
 	}
-	return &emptyScan{}
+	return bitvec.ZeroIterator()
 }
 
 /*
 Return resulting keys from a scan.
 */
-func (db *Database) Keys(s bitvec.Iterator) chan string {
+func (db *Database) Keys(s *bitvec.Iterator) chan string {
 	ch := make(chan string)
 	go func() {
-		for id := range bitvec.Ids(s) {
+		for id := range s.Ids() {
 			ch <- db.keys[id]
 		}
 		close(ch)
@@ -187,4 +181,3 @@ func (db *Database) AllColumns() map[string]int {
 	}
 	return out
 }
-

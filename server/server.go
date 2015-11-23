@@ -107,8 +107,8 @@ func handleRemove(ctx *Context, body []byte, out chan []byte) {
 		ctx.updates <- u
 	}
 }
-func buildQuery(ctx *Context, x interface{}) bitvec.Iterator {
-	var query bitvec.Iterator
+func buildQuery(ctx *Context, x interface{}) *bitvec.Iterator {
+	var query *bitvec.Iterator
 	switch v := x.(type) {
 	case string:
 		query = ctx.db.Query(v)
@@ -116,19 +116,19 @@ func buildQuery(ctx *Context, x interface{}) bitvec.Iterator {
 		op := v[0].(string)
 		query = buildQuery(ctx, v[1])
 		if op == "not" {
-			query = bitvec.Not(query)
+			query = query.Not()
 		} else {
 			if op == "and" {
 				for _, q := range v[2:] {
-					query = bitvec.And(query, buildQuery(ctx, q))
+					query = query.And(buildQuery(ctx, q))
 				}
 			} else if op == "or" {
 				for _, q := range v[2:] {
-					query = bitvec.Or(query, buildQuery(ctx, q))
+					query = query.Or(buildQuery(ctx, q))
 				}
 			} else if op == "xor" {
 				for _, q := range v[2:] {
-					query = bitvec.Xor(query, buildQuery(ctx, q))
+					query = query.Xor(buildQuery(ctx, q))
 				}
 			}
 		}
@@ -160,7 +160,7 @@ func handleCount(ctx *Context, body []byte, out chan []byte) {
 		out <- errorMsg("Malformed request body")
 	} else {
 		query := buildQuery(ctx, value)
-		out <- []byte(fmt.Sprintf(`{"count":%d}`, bitvec.Count(query)))
+		out <- []byte(fmt.Sprintf(`{"count":%d}`, query.Count()))
 	}
 }
 

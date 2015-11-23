@@ -43,6 +43,6 @@ func (col *Column) Get(id int) bool {
 	return col.vector.Get(id)
 }
 
-func (col *Column) Iterate() bitvec.Iterator {
+func (col *Column) Iterate() *bitvec.Iterator {
 	return col.vector.Iterate()
 }
