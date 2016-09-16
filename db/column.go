@@ -26,7 +26,7 @@ type Column struct {
 }
 
 func NewColumn() *Column {
-	return &Column{count: 0, vector: bitvec.NewBitvec()}
+	return &Column{count: 0, vector: bitvec.New()}
 }
 
 func (col *Column) Set(id int, value bool) {
