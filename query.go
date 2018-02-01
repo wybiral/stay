@@ -15,23 +15,38 @@
 package staydb
 
 import (
-	"github.com/wybiral/bitvec"
+	"github.com/RoaringBitmap/roaring"
 )
 
-type Query bitvec.Iterator
-
-func Not(x Query) Query {
-	return bitvec.Not(x)
+type Query struct {
+	b *roaring.Bitmap
+	n int
 }
 
-func And(x, y Query) Query {
-	return bitvec.And(x, y)
+func Not(x *Query) *Query {
+	return &Query {
+		b: roaring.Flip(x.b, 0, uint64(x.n)),
+		n: x.n,
+	}
 }
 
-func Or(x, y Query) Query {
-	return bitvec.Or(x, y)
+func And(x, y *Query) *Query {
+	return &Query {
+		b: roaring.And(x.b, y.b),
+		n: x.n,
+	}
 }
 
-func Xor(x, y Query) Query {
-	return bitvec.Xor(x, y)
+func Or(x, y *Query) *Query {
+	return &Query {
+		b: roaring.Or(x.b, y.b),
+		n: x.n,
+	}
+}
+
+func Xor(x, y *Query) *Query {
+	return &Query {
+		b: roaring.Xor(x.b, y.b),
+		n: x.n,
+	}
 }

@@ -18,18 +18,6 @@ import (
 	"testing"
 )
 
-func TestColumn(t *testing.T) {
-	col := NewColumn()
-	col.Set(1000000, true)
-	if col.Get(1000000) != true {
-		t.Errorf("col.Set(100000, true) failed")
-	}
-	col.Set(1000000, false)
-	if col.Get(1000000) != false {
-		t.Errorf("col.Set(100000, false) failed")
-	}
-}
-
 func TestDatabase(t *testing.T) {
 	db := NewDatabase()
 	db.Add("user:0", "likes:a")
